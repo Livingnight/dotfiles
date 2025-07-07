@@ -1,0 +1,3 @@
+# ~/.bashrc
+#  Redirect all bash sessions to zsh
+exec zsh
