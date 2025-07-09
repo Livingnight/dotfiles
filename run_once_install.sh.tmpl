@@ -14,7 +14,12 @@ fi
 # 2. Install asdf if not already present
 if [ ! -d "{{ .chezmoi.homeDir }}/.asdf" ]; then
   echo "Installing asdf..."
-  git clone --branch v0.18.0 https://github.com/asdf-vm/asdf.git "{{ .chezmoi.homeDir }}/.asdf"
+  mkdir ~/temp-asdf
+  curl -LO https://github.com/asdf-vm/asdf/releases/download/v0.18.0/asdf-v0.18.0-linux-amd64.tar.gz
+  tar -C ~/temp-asdf -xzf asdf-v0.18.0-linux-amd64.tar.gz
+  sudo cp ~/temp-asdf/asdf /usr/local/bin
+  sudo chmod +x ~/usr/local/bin/asdf
+  # git clone https://github.com/asdf-vm/asdf.git "{{ .chezmoi.homeDir }}/.asdf" --branch v0.18.0
 
   # build asdf binary
   echo "Building asdf binary"
@@ -43,7 +48,7 @@ fi
 . "{{ .chezmoi.homeDir }}/.asdf/asdf.sh"
 
 # 4. Add all required language plugins
-for plugin in nodejs python golang rust java; do
+for plugin in nodejs python golang rust; do
   asdf plugin add "$plugin" || true
   echo "Ensured plugin: $plugin"
 done
