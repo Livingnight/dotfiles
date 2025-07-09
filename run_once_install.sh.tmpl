@@ -9,11 +9,14 @@ readonly ASDF_VERSION="v0.18.0"
 readonly ASDF_DIR="{{ .chezmoi.homeDir }}/.asdf"
 readonly HOME_DIR="{{ .chezmoi.homeDir }}"
 readonly CARGO_TOOLS=(cargo-edit cargo-watch cargo-audit cargo-nextest)
+readonly OH_MY_ZSH_DIR="$HOME_DIR/.oh-my-zsh"
+readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
 # Colors for output
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
 # Logging functions
@@ -27,6 +30,10 @@ log_warn() {
 
 log_error() {
   echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_step() {
+  echo -e "${BLUE}[STEP]${NC} $1"
 }
 
 # Function to check if command exists
@@ -73,8 +80,276 @@ add_to_file_if_missing() {
   fi
 }
 
-# 1. Install Neovim (latest stable AppImage)
+# Function to safely source files that might have unset variables
+safe_source() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    # Create a temporary script that handles unbound variables
+    local temp_script=$(mktemp)
+    cat >"$temp_script" <<'EOF'
+#!/bin/bash
+# Temporarily disable strict mode for sourcing
+set +euo pipefail
+source "$1"
+# Re-enable what we can
+set -eo pipefail
+EOF
+    chmod +x "$temp_script"
+
+    # Source the file with relaxed error handling
+    if bash "$temp_script" "$file"; then
+      rm -f "$temp_script"
+      return 0
+    else
+      rm -f "$temp_script"
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
+# Function to safely source with export
+safe_source_with_export() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    # Temporarily disable strict mode
+    set +euo pipefail
+    # shellcheck source=/dev/null
+    source "$file"
+    # Re-enable what we can safely
+    set -eo pipefail
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Function to backup existing files
+backup_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    cp "$file" "$file.backup.$(date +%Y%m%d_%H%M%S)"
+    log_info "Backed up existing $file"
+  fi
+}
+
+# 1. Install Oh My Zsh
+install_oh_my_zsh() {
+  log_step "Installing Oh My Zsh..."
+
+  if [ ! -d "$OH_MY_ZSH_DIR" ]; then
+    log_info "Installing Oh My Zsh..."
+
+    # Backup existing .zshrc if it exists
+    backup_file "$HOME_DIR/.zshrc"
+
+    # Install Oh My Zsh
+    if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; then
+      log_info "Oh My Zsh installed successfully"
+    else
+      log_error "Failed to install Oh My Zsh"
+      return 1
+    fi
+  else
+    log_info "Oh My Zsh already installed"
+  fi
+}
+
+# 2. Install Powerlevel10k theme
+install_powerlevel10k() {
+  log_step "Installing Powerlevel10k theme..."
+
+  if [ ! -d "$P10K_DIR" ]; then
+    log_info "Installing Powerlevel10k theme..."
+
+    if git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"; then
+      log_info "Powerlevel10k installed successfully"
+
+      # Update .zshrc to use Powerlevel10k
+      if [ -f "$HOME_DIR/.zshrc" ]; then
+        sed -i 's/ZSH_THEME=".*"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$HOME_DIR/.zshrc"
+        log_info "Updated .zshrc to use Powerlevel10k theme"
+      fi
+    else
+      log_error "Failed to install Powerlevel10k"
+      return 1
+    fi
+  else
+    log_info "Powerlevel10k already installed"
+  fi
+}
+
+# 3. Install useful Oh My Zsh plugins
+install_zsh_plugins() {
+  log_step "Installing additional Zsh plugins..."
+
+  local plugins_dir="$OH_MY_ZSH_DIR/custom/plugins"
+
+  # zsh-autosuggestions
+  if [ ! -d "$plugins_dir/zsh-autosuggestions" ]; then
+    log_info "Installing zsh-autosuggestions..."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "$plugins_dir/zsh-autosuggestions"
+  fi
+
+  # zsh-syntax-highlighting
+  if [ ! -d "$plugins_dir/zsh-syntax-highlighting" ]; then
+    log_info "Installing zsh-syntax-highlighting..."
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$plugins_dir/zsh-syntax-highlighting"
+  fi
+
+  # zsh-completions
+  if [ ! -d "$plugins_dir/zsh-completions" ]; then
+    log_info "Installing zsh-completions..."
+    git clone https://github.com/zsh-users/zsh-completions "$plugins_dir/zsh-completions"
+  fi
+
+  # Update plugins in .zshrc
+  if [ -f "$HOME_DIR/.zshrc" ]; then
+    # Check if plugins line exists and update it
+    if grep -q "plugins=(" "$HOME_DIR/.zshrc"; then
+      sed -i 's/plugins=(.*/plugins=(git asdf rust cargo golang python nodejs docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME_DIR/.zshrc"
+    else
+      # Add plugins line if it doesn't exist
+      echo "plugins=(git asdf rust cargo golang python nodejs docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)" >>"$HOME_DIR/.zshrc"
+    fi
+    log_info "Updated Oh My Zsh plugins configuration"
+  fi
+}
+
+# 4. Setup Git SSH configuration
+setup_git_ssh() {
+  log_step "Setting up Git SSH configuration..."
+
+  local ssh_dir="$HOME_DIR/.ssh"
+  local ssh_key_file="$ssh_dir/id_ed25519"
+  local ssh_config_file="$ssh_dir/config"
+
+  # Create .ssh directory if it doesn't exist
+  mkdir -p "$ssh_dir"
+  chmod 700 "$ssh_dir"
+
+  # Check if SSH key already exists
+  if [ ! -f "$ssh_key_file" ]; then
+    log_info "No SSH key found. You can generate one with the following command:"
+    log_info "ssh-keygen -t ed25519 -C \"your_email@example.com\""
+    log_info "After generating, add the public key to your Git hosting service (GitHub, GitLab, etc.)"
+
+    # Create a basic SSH config template
+    if [ ! -f "$ssh_config_file" ]; then
+      cat >"$ssh_config_file" <<'EOF'
+# SSH Config for Git hosting services
+# Uncomment and modify as needed
+
+# GitHub
+# Host github.com
+#     HostName github.com
+#     User git
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes
+
+# GitLab
+# Host gitlab.com
+#     HostName gitlab.com
+#     User git
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes
+
+# Custom Git server
+# Host your-git-server.com
+#     HostName your-git-server.com
+#     User git
+#     Port 22
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes
+EOF
+      chmod 600 "$ssh_config_file"
+      log_info "Created SSH config template at $ssh_config_file"
+    fi
+  else
+    log_info "SSH key already exists at $ssh_key_file"
+
+    # Start SSH agent and add key
+    eval "$(ssh-agent -s)" >/dev/null 2>&1
+    ssh-add "$ssh_key_file" >/dev/null 2>&1
+    log_info "SSH key added to agent"
+  fi
+
+  # Setup Git configuration helpers
+  setup_git_config_helpers
+}
+
+# 5. Setup Git configuration helpers
+setup_git_config_helpers() {
+  log_info "Setting up Git configuration helpers..."
+
+  # Create git config script
+  local git_config_script="$HOME_DIR/.local/bin/git-setup"
+  mkdir -p "$HOME_DIR/.local/bin"
+
+  cat >"$git_config_script" <<'EOF'
+#!/bin/bash
+# Git configuration helper script
+
+set -euo pipefail
+
+echo "Git Configuration Setup"
+echo "======================"
+
+# Get user input
+read -p "Enter your name: " git_name
+read -p "Enter your email: " git_email
+read -p "Enter your preferred default branch name (default: main): " default_branch
+default_branch=${default_branch:-main}
+
+# Set global Git configuration
+git config --global user.name "$git_name"
+git config --global user.email "$git_email"
+git config --global init.defaultBranch "$default_branch"
+
+# Set useful Git aliases
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.unstage 'reset HEAD --'
+git config --global alias.last 'log -1 HEAD'
+git config --global alias.visual '!gitk'
+git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+
+# Set better defaults
+git config --global pull.rebase false
+git config --global push.default simple
+git config --global core.editor "nvim"
+git config --global merge.tool "vimdiff"
+
+echo "Git configuration completed!"
+echo "Name: $git_name"
+echo "Email: $git_email"
+echo "Default branch: $default_branch"
+echo ""
+echo "Useful aliases created:"
+echo "  git st    - git status"
+echo "  git co    - git checkout"
+echo "  git br    - git branch"
+echo "  git ci    - git commit"
+echo "  git lg    - pretty log"
+echo ""
+echo "Run 'git config --global --list' to see all settings"
+EOF
+
+  chmod +x "$git_config_script"
+  log_info "Created Git configuration helper at $git_config_script"
+
+  # Add to PATH in shell configs
+  add_to_file_if_missing "$HOME_DIR/.zshrc" 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
+  add_to_file_if_missing "$HOME_DIR/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
+}
+
+# 6. Install Neovim (latest stable AppImage)
 install_neovim() {
+  log_step "Installing Neovim..."
+
   if ! command_exists nvim; then
     log_info "Installing Neovim..."
     local nvim_path="/tmp/nvim.appimage"
@@ -92,8 +367,10 @@ install_neovim() {
   fi
 }
 
-# 2. Install asdf if not already present
+# 7. Install asdf if not already present
 install_asdf() {
+  log_step "Installing asdf..."
+
   if [ ! -d "$ASDF_DIR" ]; then
     log_info "Installing asdf..."
 
@@ -150,24 +427,50 @@ configure_asdf_shell_integration() {
   add_to_file_if_missing "$HOME_DIR/.bashrc" "$asdf_completion_line" ".asdf/completions/asdf.bash"
 }
 
-# 3. Setup asdf plugins and tools
+# 8. Setup asdf plugins and tools
 setup_asdf_tools() {
-  # Source asdf for this session
+  log_step "Setting up asdf tools..."
+
+  # Source asdf for this session with better error handling
   if [ -f "$ASDF_DIR/asdf.sh" ]; then
-    # shellcheck source=/dev/null
-    . "$ASDF_DIR/asdf.sh"
+    log_info "Sourcing asdf for current session..."
+
+    # Use safe sourcing method
+    if safe_source_with_export "$ASDF_DIR/asdf.sh"; then
+      log_info "Successfully sourced asdf"
+
+      # Verify asdf command is available
+      if ! command_exists asdf; then
+        # Try adding to PATH manually
+        export PATH="$ASDF_DIR/bin:$PATH"
+        if command_exists asdf; then
+          log_info "asdf command now available"
+        else
+          log_error "asdf command still not available after sourcing"
+          return 1
+        fi
+      fi
+    else
+      log_error "Failed to source asdf"
+      return 1
+    fi
   else
-    log_error "asdf not found, cannot continue with language setup"
+    log_error "asdf.sh not found at $ASDF_DIR/asdf.sh"
     return 1
   fi
 
   # Add language plugins
   local plugins=(nodejs python golang rust)
   for plugin in "${plugins[@]}"; do
-    if asdf plugin add "$plugin" 2>/dev/null; then
-      log_info "Added asdf plugin: $plugin"
+    if ! asdf plugin list | grep -q "^${plugin}$"; then
+      log_info "Adding asdf plugin: $plugin"
+      if asdf plugin add "$plugin" 2>/dev/null; then
+        log_info "Added asdf plugin: $plugin"
+      else
+        log_warn "Failed to add plugin: $plugin"
+      fi
     else
-      log_info "Plugin $plugin already exists or failed to add"
+      log_info "Plugin $plugin already exists"
     fi
   done
 
@@ -179,11 +482,15 @@ setup_asdf_tools() {
     else
       log_warn "Some tools failed to install"
     fi
+  else
+    log_info "No .tool-versions file found, skipping tool installation"
   fi
 }
 
-# 4. Install Rust cargo tools
+# 9. Install Rust cargo tools
 install_cargo_tools() {
+  log_step "Installing Rust cargo tools..."
+
   # Ensure cargo is in PATH
   export PATH="$HOME_DIR/.asdf/shims:$PATH"
   export PATH="$HOME_DIR/.cargo/bin:$PATH"
@@ -199,7 +506,7 @@ install_cargo_tools() {
           log_warn "Failed to install $tool"
         fi
       else
-        log_info "$tool already installed"
+        log_info "$tool already installed (skipping)"
       fi
     done
   else
@@ -207,14 +514,39 @@ install_cargo_tools() {
   fi
 }
 
-# 5. Install SDKMAN
+# 10. Install SDKMAN with improved error handling
 install_sdkman() {
+  log_step "Installing SDKMAN..."
+
   if [ ! -d "$HOME_DIR/.sdkman" ]; then
     log_info "Installing SDKMAN..."
-    if curl -s "https://get.sdkman.io" | bash; then
+
+    # Create a wrapper script to handle SDKMAN installation with relaxed error handling
+    local sdkman_install_script=$(mktemp)
+    cat >"$sdkman_install_script" <<'EOF'
+#!/bin/bash
+# Temporarily disable strict error handling for SDKMAN
+set +euo pipefail
+
+# Download and install SDKMAN
+curl -s "https://get.sdkman.io" | bash
+
+# Return success if .sdkman directory was created
+if [ -d "$HOME/.sdkman" ]; then
+    exit 0
+else
+    exit 1
+fi
+EOF
+
+    chmod +x "$sdkman_install_script"
+
+    if bash "$sdkman_install_script"; then
       log_info "SDKMAN installed successfully"
+      rm -f "$sdkman_install_script"
     else
       log_error "Failed to install SDKMAN"
+      rm -f "$sdkman_install_script"
       return 1
     fi
   else
@@ -222,31 +554,82 @@ install_sdkman() {
   fi
 }
 
-# 6. Setup Java ecosystem with SDKMAN
+# 11. Setup Java ecosystem with SDKMAN
 setup_java_ecosystem() {
-  # Source SDKMAN init script if present
+  log_step "Setting up Java ecosystem..."
+
+  # Source SDKMAN init script if present with better error handling
   if [ -s "$HOME_DIR/.sdkman/bin/sdkman-init.sh" ]; then
-    # shellcheck source=/dev/null
-    source "$HOME_DIR/.sdkman/bin/sdkman-init.sh"
+    log_info "Sourcing SDKMAN for current session..."
 
-    if command_exists sdk; then
-      log_info "Installing Java ecosystem tools..."
+    # Use safe sourcing method for SDKMAN
+    if safe_source_with_export "$HOME_DIR/.sdkman/bin/sdkman-init.sh"; then
+      log_info "Successfully sourced SDKMAN"
 
-      # Install with better error handling
-      sdk install java 21.0.1-tem || log_warn "Failed to install Java"
-      sdk install maven || log_warn "Failed to install Maven"
-      sdk install gradle || log_warn "Failed to install Gradle"
-      sdk install springboot || log_warn "Failed to install Spring Boot CLI"
+      # Verify sdk command is available
+      if command_exists sdk; then
+        log_info "Installing Java ecosystem tools..."
+
+        # Install with better error handling and version checking
+        log_info "Installing Java 21..."
+        if ! sdk list java | grep -q "21.0.1-tem.*installed" 2>/dev/null; then
+          if sdk install java 21.0.1-tem; then
+            log_info "Java 21.0.1-tem installed successfully"
+          else
+            log_warn "Failed to install Java 21.0.1-tem"
+          fi
+        else
+          log_info "Java 21.0.1-tem already installed"
+        fi
+
+        log_info "Installing Maven..."
+        if ! command_exists mvn; then
+          if sdk install maven; then
+            log_info "Maven installed successfully"
+          else
+            log_warn "Failed to install Maven"
+          fi
+        else
+          log_info "Maven already installed"
+        fi
+
+        log_info "Installing Gradle..."
+        if ! command_exists gradle; then
+          if sdk install gradle; then
+            log_info "Gradle installed successfully"
+          else
+            log_warn "Failed to install Gradle"
+          fi
+        else
+          log_info "Gradle already installed"
+        fi
+
+        log_info "Installing Spring Boot CLI..."
+        if ! command_exists spring; then
+          if sdk install springboot; then
+            log_info "Spring Boot CLI installed successfully"
+          else
+            log_warn "Failed to install Spring Boot CLI"
+          fi
+        else
+          log_info "Spring Boot CLI already installed"
+        fi
+      else
+        log_warn "SDK command not available after sourcing"
+      fi
     else
-      log_warn "SDK command not available"
+      log_warn "Failed to source SDKMAN properly"
+      return 1
     fi
   else
-    log_warn "SDKMAN init script not found"
+    log_warn "SDKMAN init script not found at $HOME_DIR/.sdkman/bin/sdkman-init.sh"
   fi
 }
 
-# 7. Setup LazyVim plugins
+# 12. Setup LazyVim plugins
 setup_lazyvim() {
+  log_step "Setting up LazyVim plugins..."
+
   if command_exists nvim; then
     log_info "Setting up LazyVim plugins..."
     if nvim --headless "+Lazy! sync" +qa; then
@@ -259,26 +642,73 @@ setup_lazyvim() {
   fi
 }
 
+# 13. Final configuration and tips
+show_final_tips() {
+  log_step "Setup complete! Here are some next steps:"
+
+  echo ""
+  echo "🎉 Development Environment Setup Complete!"
+  echo "========================================"
+  echo ""
+  echo "Next steps:"
+  echo "1. Restart your terminal or run: source ~/.zshrc"
+  echo "2. Run 'p10k configure' to set up Powerlevel10k theme"
+  echo "3. Generate SSH key: ssh-keygen -t ed25519 -C \"your_email@example.com\""
+  echo "4. Add SSH key to GitHub/GitLab: cat ~/.ssh/id_ed25519.pub"
+  echo "5. Configure Git: git-setup (or manually set git config)"
+  echo ""
+  echo "Installed tools:"
+  echo "- Oh My Zsh with Powerlevel10k theme"
+  echo "- Zsh plugins: autosuggestions, syntax-highlighting, completions"
+  echo "- SSH configuration template"
+  echo "- Git configuration helper"
+  echo "- Neovim with LazyVim"
+  echo "- asdf version manager"
+  echo "- SDKMAN for Java ecosystem"
+  echo "- Rust cargo tools"
+  echo ""
+  echo "Useful commands:"
+  echo "- 'git-setup' - Configure Git settings"
+  echo "- 'p10k configure' - Configure Powerlevel10k theme"
+  echo "- 'asdf list-all <plugin>' - List available versions"
+  echo "- 'sdk list java' - List available Java versions"
+  echo ""
+  echo "Troubleshooting:"
+  echo "- If you see 'ZSH_VERSION: unbound variable', restart your terminal"
+  echo "- If cargo tools show 'already installed', that's normal (use --force to override)"
+  echo "- If SDKMAN commands fail, run: source ~/.sdkman/bin/sdkman-init.sh"
+  echo "- If asdf commands fail, run: source ~/.asdf/asdf.sh"
+  echo ""
+  echo "Environment variables added to shell configs:"
+  echo "- ASDF integration in ~/.zshrc and ~/.bashrc"
+  echo "- SDKMAN integration will be added automatically"
+  echo "- PATH modifications for local tools"
+  echo ""
+}
+
 # Main execution
 main() {
-  log_info "Starting development environment setup..."
+  log_info "Starting enhanced development environment setup..."
 
   # Check if running in WSL2
   if ! grep -q "microsoft" /proc/version 2>/dev/null; then
     log_warn "This script is designed for WSL2, proceeding anyway..."
   fi
 
-  # Execute installation steps
-  install_neovim || log_error "Neovim installation failed"
-  install_asdf || log_error "asdf installation failed"
-  setup_asdf_tools || log_error "asdf tools setup failed"
-  install_cargo_tools || log_error "Cargo tools installation failed"
-  install_sdkman || log_error "SDKMAN installation failed"
-  setup_java_ecosystem || log_error "Java ecosystem setup failed"
-  setup_lazyvim || log_error "LazyVim setup failed"
+  # Execute installation steps in order with better error handling
+  install_oh_my_zsh || { log_error "Oh My Zsh installation failed"; }
+  install_powerlevel10k || { log_error "Powerlevel10k installation failed"; }
+  install_zsh_plugins || { log_error "Zsh plugins installation failed"; }
+  setup_git_ssh || { log_error "Git SSH setup failed"; }
+  install_neovim || { log_error "Neovim installation failed"; }
+  install_asdf || { log_error "asdf installation failed"; }
+  setup_asdf_tools || { log_error "asdf tools setup failed"; }
+  install_cargo_tools || { log_error "Cargo tools installation failed"; }
+  install_sdkman || { log_error "SDKMAN installation failed"; }
+  setup_java_ecosystem || { log_error "Java ecosystem setup failed"; }
+  setup_lazyvim || { log_error "LazyVim setup failed"; }
 
-  log_info "✅ Development environment setup complete!"
-  log_info "Please restart your shell or run: source ~/.zshrc (or ~/.bashrc)"
+  show_final_tips
 }
 
 # Run main function
