@@ -16,6 +16,12 @@ if [ ! -d "{{ .chezmoi.homeDir }}/.asdf" ]; then
   echo "Installing asdf..."
   git clone https://github.com/asdf-vm/asdf.git "{{ .chezmoi.homeDir }}/.asdf" --branch v0.18.0
 
+  # build asdf binary
+  echo "Building asdf binary"
+  cd "{{ .chezmoi.homeDir }}/.asdf"
+  make
+  cd -
+
   # Append asdf source lines to shell config files if not already present
   ZSHRC="{{ .chezmoi.homeDir }}/.zshrc"
   BASHRC="{{ .chezmoi.homeDir }}/.bashrc"
