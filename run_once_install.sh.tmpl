@@ -14,7 +14,7 @@ fi
 # 2. Install asdf if not already present
 if [ ! -d "{{ .chezmoi.homeDir }}/.asdf" ]; then
   echo "Installing asdf..."
-  git clone https://github.com/asdf-vm/asdf.git "{{ .chezmoi.homeDir }}/.asdf" --branch v0.18.0
+  git clone --branch v0.18.0 https://github.com/asdf-vm/asdf.git "{{ .chezmoi.homeDir }}/.asdf"
 
   # build asdf binary
   echo "Building asdf binary"
