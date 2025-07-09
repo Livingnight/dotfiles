@@ -2,7 +2,7 @@
 
 set -e
 
-{{ if eq .os "linux" }}
+{{ if eq .chezmoi.os "linux" }}
 # Detect package manager and install packages accordingly
 
 if command -v zypper &>/dev/null; then
