@@ -5,7 +5,38 @@ set -e
 {{ if eq .os "linux" }}
 # Detect package manager and install packages accordingly
 
-if command -v apt &>/dev/null; then
+if command -v zypper &>/dev/null; then
+  echo "Detected zypper (OpenSuse)..."
+  sudo zypper update
+  sudo apt install -y \
+    build-essential \
+    curl \
+    git \
+    unzip \
+    zip \
+    zsh \
+    fd-find \
+    ripgrep \
+    fzf \
+    tmux \
+    python3 \
+    python3-pip \
+    libssl-dev \
+    libreadline-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libsqlite3-dev \
+    llvm \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxml2sec1-dev \
+    libffi-dev \
+    liblzma-dev \
+    software-properties-common
+
+elif command -v apt &>/dev/null; then
   echo "Detected apt (Debian/Ubuntu)..."
   sudo apt update
   sudo apt install -y \
