@@ -2,32 +2,157 @@
 
 set -e
 
-sudo apt update && sudo apt install -y \
-  build-essential \
+{{ if eq .os "linux" }}
+# Detect package manager and install packages accordingly
+
+if command -v apt &>/dev/null; then
+  echo "Detected apt (Debian/Ubuntu)..."
+  sudo apt update
+  sudo apt install -y \
+    build-essential \
+    curl \
+    git \
+    unzip \
+    zip \
+    zsh \
+    fd-find \
+    ripgrep \
+    fzf \
+    tmux \
+    python3 \
+    python3-pip \
+    libssl-dev \
+    libreadline-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libsqlite3-dev \
+    llvm \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxml2sec1-dev \
+    libffi-dev \
+    liblzma-dev \
+    software-properties-common
+
+elif command -v dnf &>/dev/null; then
+  echo "Detected dnf (Fedora)..."
+  sudo dnf install -y \
+    @development-tools \
+    curl \
+    git \
+    unzip \
+    zip \
+    zsh \
+    fd-find \
+    ripgrep \
+    fzf \
+    tmux \
+    python3 \
+    python3-pip \
+    openssl-devel \
+    readline-devel \
+    zlib-devel \
+    bzip2-devel \
+    sqlite-devel \
+    llvm \
+    ncurses-devel \
+    xz \
+    tk-devel \
+    libxml2-devel \
+    libxmlsec1-devel \
+    libffi-devel \
+    lzma-sdk-devel
+
+elif command -v yum &>/dev/null; then
+  echo "Detected yum (RHEL/CentOS)..."
+  sudo yum groupinstall -y "Development Tools"
+  sudo yum install -y \
+    curl \
+    git \
+    unzip \
+    zip \
+    zsh \
+    fd-find \
+    ripgrep \
+    fzf \
+    tmux \
+    python3 \
+    python3-pip \
+    openssl-devel \
+    readline-devel \
+    zlib-devel \
+    bzip2-devel \
+    sqlite-devel \
+    llvm \
+    ncurses-devel \
+    xz \
+    tk-devel \
+    libxml2-devel \
+    libxmlsec1-devel \
+    libffi-devel \
+    lzma-sdk-devel
+
+elif command -v pacman &>/dev/null; then
+  echo "Detected pacman (Arch/Manjaro)..."
+  sudo pacman -Sy --noconfirm \
+    base-devel \
+    curl \
+    git \
+    unzip \
+    zip \
+    zsh \
+    fd \
+    ripgrep \
+    fzf \
+    tmux \
+    python \
+    python-pip \
+    openssl \
+    readline \
+    zlib \
+    bzip2 \
+    sqlite \
+    llvm \
+    ncurses \
+    xz \
+    tk \
+    libxml2 \
+    libxmlsec1 \
+    libffi \
+    lzma
+
+else
+  echo "❌ No known package manager found on Linux system."
+  exit 1
+fi
+
+{{ else if eq .os "darwin" }}
+# macOS-specific installation with Homebrew
+if ! command -v brew &>/dev/null; then
+  echo "Installing Homebrew..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+brew install \
+  coreutils \
   curl \
   git \
   unzip \
-  zip \
   zsh \
-  fd-find \
+  fd \
   ripgrep \
   fzf \
   tmux \
-  python3 \
-  python3-pip \
-  libssl-dev \
-  libreadline-dev \
-  zlib1g-dev \
-  libbz2-dev \
-  libsqlite3-dev \
-  llvm \
-  libncursesw5-dev \
-  xz-utils \
-  tk-dev \
-  libxml2-dev \
-  libxml2sec1-dev \
-  libffi-dev \
-  liblzma-dev \
-  software-properties-common
+  python \
+  llvm
 
-echo "System packages installed."
+echo "✅ Packages installed using Homebrew."
+
+{{ else }}
+echo "❌ Unsupported operating system: {{ .os }}"
+exit 1
+{{ end }}
+
+echo "✅ System bootstrap completed successfully."
