@@ -1,0 +1,8 @@
+[user]
+	email = jjernigan1065@gmail.com
+	name = Jay Jernigan
+[pull]
+	rebase = false
+[core]
+  editor = nvim -f
+  

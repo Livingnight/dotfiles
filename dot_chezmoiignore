@@ -1,0 +1,7 @@
+.sdkman/
+.pyenv/
+.nvm/
+.cargo/
+.go/
+.rustup/
+.node-gyp/

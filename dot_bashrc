@@ -1,3 +1,56 @@
 # ~/.bashrc
-#  Redirect all bash sessions to zsh
-exec zsh
+
+# Only auto-switch to Zsh if:
+# - This is an interactive shell
+# - Zsh is not already running
+# - We're not in tmux or some other special context
+
+case $- in
+*i*)
+  if [ -z "$ZSH_VERSION" ] && [ -z "$TMUX" ] && [ -z "$INSIDE_ZSH" ]; then
+    exec zsh
+  fi
+  ;;
+esac
+
+# --- Safe fallback content for pure Bash use ---
+
+# History settings
+HISTCONTROL=ignoreboth
+shopt -s histappend
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# Check terminal size after each command
+shopt -s checkwinsize
+
+# Set a nicer prompt (only if not overridden)
+if [ "$PS1" ]; then
+  PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+
+# Enable color support
+if [ -x /usr/bin/dircolors ]; then
+  eval "$(dircolors -b)"
+  alias ls='ls --color=auto'
+  alias grep='grep --color=auto'
+  alias fgrep='grep -F --color=auto'
+  alias egrep='grep -E --color=auto'
+fi
+
+# Common aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Source additional aliases if they exist
+[ -f ~/.bash_aliases ] && . ~/.bash_aliases
+
+# Enable bash completion if available
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi

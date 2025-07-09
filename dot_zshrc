@@ -9,6 +9,7 @@ fi
 # 🧠 Base Configuration
 # -------------------------------------------
 
+export INSIDE_ZSH=1
 # Set PATH early to ensure local tools are found first
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
