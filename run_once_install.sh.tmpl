@@ -49,6 +49,8 @@ download_with_retry() {
   local count=0
 
   while [ $count -lt $retries ]; do
+    log_info "URL: '$url'"
+    log_info "OUTPUT: '$output'"
     if curl -fsSL --connect-timeout 10 --max-time 300 "$url" -o "$output"; then
       # Verify the file is not empty and is the expected type
       if [ -s "$output" ]; then
@@ -70,13 +72,18 @@ add_to_file_if_missing() {
   local line="$2"
   local search_pattern="$3"
 
-  if [ -f "$file" ]; then
-    if ! grep -q "$search_pattern" "$file"; then
-      echo "$line" >>"$file"
-      log_info "Added configuration to $file"
-    else
-      log_info "Configuration already exists in $file"
-    fi
+  # Create the file if it doesn't exist
+  if [ ! -f "$file" ]; then
+    touch "$file"
+    log_info "Created $file"
+  fi
+
+  # Check if the pattern exists in the file
+  if ! grep -q "$search_pattern" "$file"; then
+    echo "$line" >>"$file"
+    log_info "Added configuration to $file"
+  else
+    log_info "Configuration already exists in $file"
   fi
 }
 
@@ -354,7 +361,7 @@ install_neovim() {
     log_info "Installing Neovim..."
     local nvim_path="/tmp/nvim.appimage"
 
-    if download_with_retry "https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x84_64.appimage" "$nvim_path"; then
+    if download_with_retry "https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.appimage" "$nvim_path"; then
       chmod u+x "$nvim_path"
       sudo mv "$nvim_path" /usr/local/bin/nvim
       log_info "Neovim installed successfully"
@@ -414,17 +421,42 @@ install_asdf() {
 }
 
 # Configure asdf shell integration
-configure_asdf_shell_integration() {
-  local asdf_source_line=". \"$ASDF_DIR/asdf.sh\""
-  local asdf_completion_line=". \"$ASDF_DIR/completions/asdf.bash\""
+configure_asdf_shell_integration_v2() {
+  log_info "Configuring asdf shell integration..."
 
-  # Add to zshrc
-  add_to_file_if_missing "$HOME_DIR/.zshrc" "$asdf_source_line" ".asdf/asdf.sh"
-  add_to_file_if_missing "$HOME_DIR/.zshrc" "$asdf_completion_line" ".asdf/completions/asdf.bash"
+  # For .zshrc
+  if [ -f "$HOME_DIR/.zshrc" ]; then
+    # Check if asdf is already configured
+    if ! grep -q "asdf.sh" "$HOME_DIR/.zshrc"; then
+      cat >>"$HOME_DIR/.zshrc" <<EOF
 
-  # Add to bashrc
-  add_to_file_if_missing "$HOME_DIR/.bashrc" "$asdf_source_line" ".asdf/asdf.sh"
-  add_to_file_if_missing "$HOME_DIR/.bashrc" "$asdf_completion_line" ".asdf/completions/asdf.bash"
+# asdf version manager
+. "\$HOME/.asdf/asdf.sh"
+# asdf completions
+. "\$HOME/.asdf/completions/asdf.bash"
+EOF
+      log_info "Added asdf configuration to .zshrc"
+    else
+      log_info "asdf already configured in .zshrc"
+    fi
+  fi
+
+  # For .bashrc
+  if [ -f "$HOME_DIR/.bashrc" ]; then
+    # Check if asdf is already configured
+    if ! grep -q "asdf.sh" "$HOME_DIR/.bashrc"; then
+      cat >>"$HOME_DIR/.bashrc" <<EOF
+
+# asdf version manager
+. "\$HOME/.asdf/asdf.sh"
+# asdf completions
+. "\$HOME/.asdf/completions/asdf.bash"
+EOF
+      log_info "Added asdf configuration to .bashrc"
+    else
+      log_info "asdf already configured in .bashrc"
+    fi
+  fi
 }
 
 # 8. Setup asdf plugins and tools
