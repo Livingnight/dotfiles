@@ -215,7 +215,7 @@ install_zsh_plugins() {
   if [ -f "$HOME_DIR/.zshrc" ]; then
     # Check if plugins line exists and update it
     if grep -q "plugins=(" "$HOME_DIR/.zshrc"; then
-      sed -i 's/plugins=(.*/plugins=(git asdf rust cargo golang python nodejs docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME_DIR/.zshrc"
+      sed -i 's/plugins=(.*/plugins=(git asdf rust golang python docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME_DIR/.zshrc"
     else
       # Add plugins line if it doesn't exist
       echo "plugins=(git asdf rust cargo golang python nodejs docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)" >>"$HOME_DIR/.zshrc"
@@ -414,20 +414,24 @@ install_asdf() {
     fi
 
     # Configure shell integration
-    configure_asdf_shell_integration
+    configure_asdf_shell_integration_v2
   else
     log_info "asdf already installed"
   fi
 }
 
-# Configure asdf shell integration
+# Configure asdf shell integration with debug logging
 configure_asdf_shell_integration_v2() {
   log_info "Configuring asdf shell integration..."
 
   # For .zshrc
   if [ -f "$HOME_DIR/.zshrc" ]; then
+    log_info "Found .zshrc at $HOME_DIR/.zshrc"
+
     # Check if asdf is already configured
     if ! grep -q "asdf.sh" "$HOME_DIR/.zshrc"; then
+      log_info "asdf not found in .zshrc, adding configuration..."
+
       cat >>"$HOME_DIR/.zshrc" <<EOF
 
 # asdf version manager
@@ -435,16 +439,30 @@ configure_asdf_shell_integration_v2() {
 # asdf completions
 . "\$HOME/.asdf/completions/asdf.bash"
 EOF
+
       log_info "Added asdf configuration to .zshrc"
+
+      # Verify it was added
+      if grep -q "asdf.sh" "$HOME_DIR/.zshrc"; then
+        log_info "✓ Verification: asdf configuration found in .zshrc"
+      else
+        log_error "✗ Verification failed: asdf configuration not found in .zshrc"
+      fi
     else
       log_info "asdf already configured in .zshrc"
     fi
+  else
+    log_warn ".zshrc not found at $HOME_DIR/.zshrc"
   fi
 
   # For .bashrc
   if [ -f "$HOME_DIR/.bashrc" ]; then
+    log_info "Found .bashrc at $HOME_DIR/.bashrc"
+
     # Check if asdf is already configured
     if ! grep -q "asdf.sh" "$HOME_DIR/.bashrc"; then
+      log_info "asdf not found in .bashrc, adding configuration..."
+
       cat >>"$HOME_DIR/.bashrc" <<EOF
 
 # asdf version manager
@@ -452,10 +470,20 @@ EOF
 # asdf completions
 . "\$HOME/.asdf/completions/asdf.bash"
 EOF
+
       log_info "Added asdf configuration to .bashrc"
+
+      # Verify it was added
+      if grep -q "asdf.sh" "$HOME_DIR/.bashrc"; then
+        log_info "✓ Verification: asdf configuration found in .bashrc"
+      else
+        log_error "✗ Verification failed: asdf configuration not found in .bashrc"
+      fi
     else
       log_info "asdf already configured in .bashrc"
     fi
+  else
+    log_warn ".bashrc not found at $HOME_DIR/.bashrc"
   fi
 }
 
