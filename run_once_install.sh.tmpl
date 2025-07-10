@@ -354,7 +354,7 @@ install_neovim() {
     log_info "Installing Neovim..."
     local nvim_path="/tmp/nvim.appimage"
 
-    if download_with_retry "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage" "$nvim_path"; then
+    if download_with_retry "https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-arm64.appimage" "$nvim_path"; then
       chmod u+x "$nvim_path"
       sudo mv "$nvim_path" /usr/local/bin/nvim
       log_info "Neovim installed successfully"
