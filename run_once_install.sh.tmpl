@@ -12,384 +12,89 @@ readonly CARGO_TOOLS=(cargo-edit cargo-watch cargo-audit cargo-nextest)
 readonly OH_MY_ZSH_DIR="$HOME_DIR/.oh-my-zsh"
 readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
-# Colors for output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m' # No Color
+#INFO: Function to check if command exists
 
-# Logging functions
-log_info() {
-  echo -e "${GREEN}[INFO]${NC} $1"
-}
+# command_exists()
 
-log_warn() {
-  echo -e "${YELLOW}[WARN]${NC} $1"
-}
+#INFO: Logging functions sourced from logging.sh
 
-log_error() {
-  echo -e "${RED}[ERROR]${NC} $1"
-}
+. logging.sh
 
-log_step() {
-  echo -e "${BLUE}[STEP]${NC} $1"
-}
+#INFO: Colors for output
+# RED='\033[0;31m'
+# GREEN='\033[0;32m'
+# YELLOW='\033[1;33m'
+# BLUE='\033[0;34m'
+# NC='\033[0m' # No Color
 
-# Function to check if command exists
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
+#INFO: Logging functions
+# log_info() {
+# log_warn() {
+# log_error() {
+# log_step() {
 
-# Function to download and verify files
-download_with_retry() {
-  local url="$1"
-  local output="$2"
-  local retries=3
-  local count=0
+#INFO: Utility functions sourced from utils.sh
 
-  while [ $count -lt $retries ]; do
-    log_info "URL: '$url'"
-    log_info "OUTPUT: '$output'"
-    if curl -fsSL --connect-timeout 10 --max-time 300 "$url" -o "$output"; then
-      # Verify the file is not empty and is the expected type
-      if [ -s "$output" ]; then
-        return 0
-      fi
-    fi
-    count=$((count + 1))
-    log_warn "Download attempt $count failed, retrying..."
-    sleep 2
-  done
+. utils.sh
 
-  log_error "Failed to download $url after $retries attempts"
-  return 1
-}
+#INFO: function to download and verify files
 
-# Function to add line to file if not present
-add_to_file_if_missing() {
-  local file="$1"
-  local line="$2"
-  local search_pattern="$3"
+# download_with_retry()
 
-  # Create the file if it doesn't exist
-  if [ ! -f "$file" ]; then
-    touch "$file"
-    log_info "Created $file"
-  fi
+#INFO: Function to add line to file if not present
 
-  # Check if the pattern exists in the file
-  if ! grep -q "$search_pattern" "$file"; then
-    echo "$line" >>"$file"
-    log_info "Added configuration to $file"
-  else
-    log_info "Configuration already exists in $file"
-  fi
-}
+# add_to_file_if_missing()
 
-# Function to safely source files that might have unset variables
-safe_source() {
-  local file="$1"
-  if [ -f "$file" ]; then
-    # Create a temporary script that handles unbound variables
-    local temp_script=$(mktemp)
-    cat >"$temp_script" <<'EOF'
-#!/bin/bash
-# Temporarily disable strict mode for sourcing
-set +euo pipefail
-source "$1"
-# Re-enable what we can
-set -eo pipefail
-EOF
-    chmod +x "$temp_script"
+#INFO: Function to safely source files that might have unset variables
 
-    # Source the file with relaxed error handling
-    if bash "$temp_script" "$file"; then
-      rm -f "$temp_script"
-      return 0
-    else
-      rm -f "$temp_script"
-      return 1
-    fi
-  else
-    return 1
-  fi
-}
+# safe_source()
 
-# Function to safely source with export
-safe_source_with_export() {
-  local file="$1"
-  if [ -f "$file" ]; then
-    # Temporarily disable strict mode
-    set +euo pipefail
-    # shellcheck source=/dev/null
-    source "$file"
-    # Re-enable what we can safely
-    set -eo pipefail
-    return 0
-  else
-    return 1
-  fi
-}
+#INFO: Function to safely source with export
 
-# Function to backup existing files
-backup_file() {
-  local file="$1"
-  if [ -f "$file" ]; then
-    cp "$file" "$file.backup.$(date +%Y%m%d_%H%M%S)"
-    log_info "Backed up existing $file"
-  fi
-}
+# safe_source_with_export()
 
-# 1. Install Oh My Zsh
-install_oh_my_zsh() {
-  log_step "Installing Oh My Zsh..."
+#INFO: Function to backup existing files
 
-  if [ ! -d "$OH_MY_ZSH_DIR" ]; then
-    log_info "Installing Oh My Zsh..."
+# backup_file()
 
-    # Backup existing .zshrc if it exists
-    backup_file "$HOME_DIR/.zshrc"
+#INFO: 1. Install Oh My Zsh, Powerlevel10k, omz plugins sourced from zsh_omz_p10k.sh
 
-    # Install Oh My Zsh
-    if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended; then
-      log_info "Oh My Zsh installed successfully"
-    else
-      log_error "Failed to install Oh My Zsh"
-      return 1
-    fi
-  else
-    log_info "Oh My Zsh already installed"
-  fi
-}
+. zsh_omz_p10k.sh
 
-# 2. Install Powerlevel10k theme
-install_powerlevel10k() {
-  log_step "Installing Powerlevel10k theme..."
+# install_oh_my_zsh()
+# install_powerlevel10k()
+# install_zsh_plugins()
 
-  if [ ! -d "$P10K_DIR" ]; then
-    log_info "Installing Powerlevel10k theme..."
+#INFO: Git Setup and configuration sourced from git_install_and_setup.sh
+. git_install_and_setup.sh
 
-    if git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"; then
-      log_info "Powerlevel10k installed successfully"
+#INFO: Setup Git SSH configuration & helpers
 
-      # Update .zshrc to use Powerlevel10k
-      if [ -f "$HOME_DIR/.zshrc" ]; then
-        sed -i 's/ZSH_THEME=".*"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$HOME_DIR/.zshrc"
-        log_info "Updated .zshrc to use Powerlevel10k theme"
-      fi
-    else
-      log_error "Failed to install Powerlevel10k"
-      return 1
-    fi
-  else
-    log_info "Powerlevel10k already installed"
-  fi
-}
-
-# 3. Install useful Oh My Zsh plugins
-install_zsh_plugins() {
-  log_step "Installing additional Zsh plugins..."
-
-  local plugins_dir="$OH_MY_ZSH_DIR/custom/plugins"
-
-  # zsh-autosuggestions
-  if [ ! -d "$plugins_dir/zsh-autosuggestions" ]; then
-    log_info "Installing zsh-autosuggestions..."
-    git clone https://github.com/zsh-users/zsh-autosuggestions "$plugins_dir/zsh-autosuggestions"
-  fi
-
-  # zsh-syntax-highlighting
-  if [ ! -d "$plugins_dir/zsh-syntax-highlighting" ]; then
-    log_info "Installing zsh-syntax-highlighting..."
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$plugins_dir/zsh-syntax-highlighting"
-  fi
-
-  # zsh-completions
-  if [ ! -d "$plugins_dir/zsh-completions" ]; then
-    log_info "Installing zsh-completions..."
-    git clone https://github.com/zsh-users/zsh-completions "$plugins_dir/zsh-completions"
-  fi
-
-  # Update plugins in .zshrc
-  if [ -f "$HOME_DIR/.zshrc" ]; then
-    # Check if plugins line exists and update it
-    if grep -q "plugins=(" "$HOME_DIR/.zshrc"; then
-      sed -i 's/plugins=(.*/plugins=(git asdf rust golang python docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$HOME_DIR/.zshrc"
-    else
-      # Add plugins line if it doesn't exist
-      echo "plugins=(git asdf rust cargo golang python nodejs docker docker-compose kubectl zsh-autosuggestions zsh-syntax-highlighting zsh-completions)" >>"$HOME_DIR/.zshrc"
-    fi
-    log_info "Updated Oh My Zsh plugins configuration"
-  fi
-}
-
-# 4. Setup Git SSH configuration
-setup_git_ssh() {
-  log_step "Setting up Git SSH configuration..."
-
-  local ssh_dir="$HOME_DIR/.ssh"
-  local ssh_key_file="$ssh_dir/id_ed25519"
-  local ssh_config_file="$ssh_dir/config"
-
-  # Create .ssh directory if it doesn't exist
-  mkdir -p "$ssh_dir"
-  chmod 700 "$ssh_dir"
-
-  # Check if SSH key already exists
-  if [ ! -f "$ssh_key_file" ]; then
-    log_info "No SSH key found. You can generate one with the following command:"
-    log_info "ssh-keygen -t ed25519 -C \"your_email@example.com\""
-    log_info "After generating, add the public key to your Git hosting service (GitHub, GitLab, etc.)"
-
-    # Create a basic SSH config template
-    if [ ! -f "$ssh_config_file" ]; then
-      cat >"$ssh_config_file" <<'EOF'
-# SSH Config for Git hosting services
-# Uncomment and modify as needed
-
-# GitHub
-# Host github.com
-#     HostName github.com
-#     User git
-#     IdentityFile ~/.ssh/id_ed25519
-#     IdentitiesOnly yes
-
-# GitLab
-# Host gitlab.com
-#     HostName gitlab.com
-#     User git
-#     IdentityFile ~/.ssh/id_ed25519
-#     IdentitiesOnly yes
-
-# Custom Git server
-# Host your-git-server.com
-#     HostName your-git-server.com
-#     User git
-#     Port 22
-#     IdentityFile ~/.ssh/id_ed25519
-#     IdentitiesOnly yes
-EOF
-      chmod 600 "$ssh_config_file"
-      log_info "Created SSH config template at $ssh_config_file"
-    fi
-  else
-    log_info "SSH key already exists at $ssh_key_file"
-
-    # Start SSH agent and add key
-    eval "$(ssh-agent -s)" >/dev/null 2>&1
-    ssh-add "$ssh_key_file" >/dev/null 2>&1
-    log_info "SSH key added to agent"
-  fi
-
-  # Setup Git configuration helpers
-  setup_git_config_helpers
-}
-
-# 5. Setup Git configuration helpers
-setup_git_config_helpers() {
-  log_info "Setting up Git configuration helpers..."
-
-  # Create git config script
-  local git_config_script="$HOME_DIR/.local/bin/git-setup"
-  mkdir -p "$HOME_DIR/.local/bin"
-
-  cat >"$git_config_script" <<'EOF'
-#!/bin/bash
-# Git configuration helper script
-
-set -euo pipefail
-
-echo "Git Configuration Setup"
-echo "======================"
-
-# Get user input
-read -p "Enter your name: " git_name
-read -p "Enter your email: " git_email
-read -p "Enter your preferred default branch name (default: main): " default_branch
-default_branch=${default_branch:-main}
-
-# Set global Git configuration
-git config --global user.name "$git_name"
-git config --global user.email "$git_email"
-git config --global init.defaultBranch "$default_branch"
-
-# Set useful Git aliases
-git config --global alias.st status
-git config --global alias.co checkout
-git config --global alias.br branch
-git config --global alias.ci commit
-git config --global alias.unstage 'reset HEAD --'
-git config --global alias.last 'log -1 HEAD'
-git config --global alias.visual '!gitk'
-git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
-
-# Set better defaults
-git config --global pull.rebase false
-git config --global push.default simple
-git config --global core.editor "nvim"
-git config --global merge.tool "vimdiff"
-
-echo "Git configuration completed!"
-echo "Name: $git_name"
-echo "Email: $git_email"
-echo "Default branch: $default_branch"
-echo ""
-echo "Useful aliases created:"
-echo "  git st    - git status"
-echo "  git co    - git checkout"
-echo "  git br    - git branch"
-echo "  git ci    - git commit"
-echo "  git lg    - pretty log"
-echo ""
-echo "Run 'git config --global --list' to see all settings"
-EOF
-
-  chmod +x "$git_config_script"
-  log_info "Created Git configuration helper at $git_config_script"
-
-  # Add to PATH in shell configs
-  add_to_file_if_missing "$HOME_DIR/.zshrc" 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
-  add_to_file_if_missing "$HOME_DIR/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
-}
-
-# 6. Install Neovim (latest stable AppImage)
-install_neovim() {
-  log_step "Installing Neovim..."
-
-  if ! command_exists nvim; then
-    log_info "Installing Neovim..."
-    local nvim_path="/tmp/nvim.appimage"
-
-    if download_with_retry "https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.appimage" "$nvim_path"; then
-      chmod u+x "$nvim_path"
-      sudo mv "$nvim_path" /usr/local/bin/nvim
-      log_info "Neovim installed successfully"
-    else
-      log_error "Failed to install Neovim"
-      return 1
-    fi
-  else
-    log_info "Neovim already installed"
-  fi
-}
+# setup_git_ssh() {
+# setup_git_config_helpers()
 
 # 7. Install asdf if not already present
 install_asdf() {
   log_step "Installing asdf..."
 
-  if [ ! -d "$ASDF_DIR" ]; then
+  if [ ! -d "$ASDF_DIR" ] || [ ! -f "$ASDF_DIR/asdf.sh" ]; then
     log_info "Installing asdf..."
+
+    if ! command_exists git; then
+
+    fi
 
     # Clone the full asdf repository for shell integration and plugins
     if git clone https://github.com/asdf-vm/asdf.git "$ASDF_DIR" --branch "$ASDF_VERSION"; then
       log_info "asdf repository cloned successfully"
 
+      log_step "Installing asdf binary and replacing the shell script with the binary."
       # Optional: Replace the shell script with the binary for better performance
       local asdf_archive="/tmp/asdf-${ASDF_VERSION}-linux-amd64.tar.gz"
       local asdf_url="https://github.com/asdf-vm/asdf/releases/download/${ASDF_VERSION}/asdf-${ASDF_VERSION}-linux-amd64.tar.gz"
 
       if download_with_retry "$asdf_url" "$asdf_archive"; then
+        log_info "Downloading and installing the binary"
         if gzip -t "$asdf_archive" 2>/dev/null; then
           # Extract binary to temporary location
           local temp_dir="/tmp/asdf-binary"
@@ -404,6 +109,8 @@ install_asdf() {
 
           # Clean up
           rm -rf "$temp_dir" "$asdf_archive"
+        else
+          log_warn "Binary was downloaded but file was corrupted"
         fi
       else
         log_warn "Failed to download binary, using shell script version"

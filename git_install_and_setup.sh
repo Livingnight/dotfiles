@@ -1,0 +1,127 @@
+setup_git_ssh() {
+  log_step "Setting up Git SSH configuration..."
+
+  local ssh_dir="$HOME_DIR/.ssh"
+  local ssh_key_file="$ssh_dir/id_ed25519"
+  local ssh_config_file="$ssh_dir/config"
+
+  # Create .ssh directory if it doesn't exist
+  mkdir -p "$ssh_dir"
+  chmod 700 "$ssh_dir"
+
+  # Check if SSH key already exists
+  if [ ! -f "$ssh_key_file" ]; then
+    log_info "No SSH key found. You can generate one with the following command:"
+    log_info "ssh-keygen -t ed25519 -C \"your_email@example.com\""
+    log_info "After generating, add the public key to your Git hosting service (GitHub, GitLab, etc.)"
+
+    # Create a basic SSH config template
+    if [ ! -f "$ssh_config_file" ]; then
+      cat >"$ssh_config_file" <<'EOF'
+# SSH Config for Git hosting services
+# Uncomment and modify as needed
+
+# GitHub
+# Host github.com
+#     HostName github.com
+#     User git
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes
+
+# GitLab
+# Host gitlab.com
+#     HostName gitlab.com
+#     User git
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes
+
+# Custom Git server
+# Host your-git-server.com
+#     HostName your-git-server.com
+#     User git
+#     Port 22
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes
+EOF
+      chmod 600 "$ssh_config_file"
+      log_info "Created SSH config template at $ssh_config_file"
+    fi
+  else
+    log_info "SSH key already exists at $ssh_key_file"
+
+    # Start SSH agent and add key
+    eval "$(ssh-agent -s)" >/dev/null 2>&1
+    ssh-add "$ssh_key_file" >/dev/null 2>&1
+    log_info "SSH key added to agent"
+  fi
+
+  # Setup Git configuration helpers
+  setup_git_config_helpers
+}
+
+# 5. Setup Git configuration helpers
+setup_git_config_helpers() {
+  log_info "Setting up Git configuration helpers..."
+
+  # Create git config script
+  local git_config_script="$HOME_DIR/.local/bin/git-setup"
+  mkdir -p "$HOME_DIR/.local/bin"
+
+  cat >"$git_config_script" <<'EOF'
+#!/bin/bash
+# Git configuration helper script
+
+set -euo pipefail
+
+echo "Git Configuration Setup"
+echo "======================"
+
+# Get user input
+read -p "Enter your name: " git_name
+read -p "Enter your email: " git_email
+read -p "Enter your preferred default branch name (default: main): " default_branch
+# default_branch=${default_branch:-main}
+
+# Set global Git configuration
+git config --global user.name "$git_name"
+git config --global user.email "$git_email"
+git config --global init.defaultBranch "$default_branch"
+
+# Set useful Git aliases
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.unstage 'reset HEAD --'
+git config --global alias.last 'log -1 HEAD'
+git config --global alias.visual '!gitk'
+git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+
+# Set better defaults
+git config --global pull.rebase false
+git config --global push.default simple
+git config --global core.editor "nvim"
+git config --global merge.tool "vimdiff"
+
+echo "Git configuration completed!"
+echo "Name: $git_name"
+echo "Email: $git_email"
+echo "Default branch: $default_branch"
+echo ""
+echo "Useful aliases created:"
+echo "  git st    - git status"
+echo "  git co    - git checkout"
+echo "  git br    - git branch"
+echo "  git ci    - git commit"
+echo "  git lg    - pretty log"
+echo ""
+echo "Run 'git config --global --list' to see all settings"
+EOF
+
+  chmod +x "$git_config_script"
+  log_info "Created Git configuration helper at $git_config_script"
+
+  # Add to PATH in shell configs
+  add_to_file_if_missing "$HOME_DIR/.zshrc" 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
+  add_to_file_if_missing "$HOME_DIR/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
+}
