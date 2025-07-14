@@ -18,7 +18,7 @@ readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
 #INFO: Logging functions sourced from logging.sh
 
-. logging.sh
+. "{ $CHEZMOI_SOURCE_DIR}/scripts/logging.sh"
 
 #INFO: Colors for output
 # RED='\033[0;31m'
@@ -35,7 +35,7 @@ readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
 #INFO: Utility functions sourced from utils.sh
 
-. utils.sh
+. "{ $CHEZMOI_SOURCE_DIR}/scripts/utils.sh"
 
 #INFO: function to download and verify files
 
@@ -239,15 +239,18 @@ main() {
   fi
 
   # Execute installation steps in order with better error handling
-  . zsh_omz_p10k.sh
+  . "${CHEZMOI_SOURCE_DIR}/scripts/zsh_omz_p10k.sh"
   install_oh_my_zsh || { log_error "Oh My Zsh installation failed"; }
   install_powerlevel10k || { log_error "Powerlevel10k installation failed"; }
   install_zsh_plugins || { log_error "Zsh plugins installation failed"; }
-  . git_install_and_setup.sh
+
+  . "${CHEZMOI_SOURCE_DIR}/scripts/git_install_and_setup.sh"
   setup_git_ssh || { log_error "Git SSH setup failed"; }
-  . neovim_install.sh
-  install_neovim || { log_error "Neovim installation failed"; }
-  . asdf_install.sh
+
+  . "${CHEZMOI_SOURCE_DIR}/scripts/neovim_install.sh"
+  install_neovim || { log_error "Neovim installation failed"j; }
+
+  . "${CHEZMOI_SOURCE_DIR}/scripts/asdf_install.sh"
   install_asdf || { log_error "asdf installation failed"; }
   setup_asdf_tools || { log_error "asdf tools setup failed"; }
   install_cargo_tools || { log_error "Cargo tools installation failed"; }
