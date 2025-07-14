@@ -4,8 +4,8 @@
 set -euo pipefail
 
 #INFO: sourcing utility and logging functions
-. utils.sh
-. logging.sh
+. ${CHEZMOI_SOURCE_DIR}/scripts/03_utils.sh
+. ${CHEZMOI_SOURCE_DIR}/scripts/02_logging.sh
 
 # 7. Install asdf if not already present
 install_asdf() {
