@@ -4,7 +4,7 @@
 set -euo pipefail
 
 #INFO: source logging functions
-. 02_logging.sh
+. "{{ .chezmoi.homeDir }}/scripts/logging.sh"
 
 #INFO: checking to see if command exists in path
 command_exists() {

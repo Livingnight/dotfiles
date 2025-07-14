@@ -16,9 +16,9 @@ readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
 # command_exists()
 
-#INFO: Logging functions sourced from 02_logging.sh
+#INFO: Logging functions sourced from logging.sh
 
-. ${CHEZMOI_SOURCE_DIR}/scripts/logging.sh
+. "{{ .chezmoi.homeDir }}/scripts/logging.sh"
 
 #INFO: Colors for output
 # RED='\033[0;31m'
@@ -35,7 +35,7 @@ readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
 #INFO: Utility functions sourced from 03_utils.sh
 
-. ${CHEZMOI_SOURCE_DIR}/scripts/utils.sh
+. "{{ .chezmoi.homeDir }}/scripts/utils.sh"
 
 #INFO: function to download and verify files
 
@@ -57,135 +57,6 @@ readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 
 # backup_file()
 
-# 10. Install SDKMAN with improved error handling
-install_sdkman() {
-  log_step "Installing SDKMAN..."
-
-  if [ ! -d "$HOME_DIR/.sdkman" ]; then
-    log_info "Installing SDKMAN..."
-
-    # Create a wrapper script to handle SDKMAN installation with relaxed error handling
-    local sdkman_install_script=$(mktemp)
-    cat >"$sdkman_install_script" <<'EOF'
-#!/bin/bash
-# Temporarily disable strict error handling for SDKMAN
-set +euo pipefail
-
-# Download and install SDKMAN
-curl -s "https://get.sdkman.io" | bash
-
-# Return success if .sdkman directory was created
-if [ -d "$HOME/.sdkman" ]; then
-    exit 0
-else
-    exit 1
-fi
-EOF
-
-    chmod +x "$sdkman_install_script"
-
-    if bash "$sdkman_install_script"; then
-      log_info "SDKMAN installed successfully"
-      rm -f "$sdkman_install_script"
-    else
-      log_error "Failed to install SDKMAN"
-      rm -f "$sdkman_install_script"
-      return 1
-    fi
-  else
-    log_info "SDKMAN already installed"
-  fi
-}
-
-# 11. Setup Java ecosystem with SDKMAN
-setup_java_ecosystem() {
-  log_step "Setting up Java ecosystem..."
-
-  # Source SDKMAN init script if present with better error handling
-  if [ -s "$HOME_DIR/.sdkman/bin/sdkman-init.sh" ]; then
-    log_info "Sourcing SDKMAN for current session..."
-
-    # Use safe sourcing method for SDKMAN
-    if safe_source_with_export "$HOME_DIR/.sdkman/bin/sdkman-init.sh"; then
-      log_info "Successfully sourced SDKMAN"
-
-      # Verify sdk command is available
-      if command_exists sdk; then
-        log_info "Installing Java ecosystem tools..."
-
-        # Install with better error handling and version checking
-        log_info "Installing Java 21..."
-        if ! sdk list java | grep -q "21.0.1-tem.*installed" 2>/dev/null; then
-          if sdk install java 21.0.1-tem; then
-            log_info "Java 21.0.1-tem installed successfully"
-          else
-            log_warn "Failed to install Java 21.0.1-tem"
-          fi
-        else
-          log_info "Java 21.0.1-tem already installed"
-        fi
-
-        log_info "Installing Maven..."
-        if ! command_exists mvn; then
-          if sdk install maven; then
-            log_info "Maven installed successfully"
-          else
-            log_warn "Failed to install Maven"
-          fi
-        else
-          log_info "Maven already installed"
-        fi
-
-        log_info "Installing Gradle..."
-        if ! command_exists gradle; then
-          if sdk install gradle; then
-            log_info "Gradle installed successfully"
-          else
-            log_warn "Failed to install Gradle"
-          fi
-        else
-          log_info "Gradle already installed"
-        fi
-
-        log_info "Installing Spring Boot CLI..."
-        if ! command_exists spring; then
-          if sdk install springboot; then
-            log_info "Spring Boot CLI installed successfully"
-          else
-            log_warn "Failed to install Spring Boot CLI"
-          fi
-        else
-          log_info "Spring Boot CLI already installed"
-        fi
-      else
-        log_warn "SDK command not available after sourcing"
-      fi
-    else
-      log_warn "Failed to source SDKMAN properly"
-      return 1
-    fi
-  else
-    log_warn "SDKMAN init script not found at $HOME_DIR/.sdkman/bin/sdkman-init.sh"
-  fi
-}
-
-# 12. Setup LazyVim plugins
-setup_lazyvim() {
-  log_step "Setting up LazyVim plugins..."
-
-  if command_exists nvim; then
-    log_info "Setting up LazyVim plugins..."
-    if nvim --headless "+Lazy! sync" +qa; then
-      log_info "LazyVim plugins setup complete"
-    else
-      log_warn "LazyVim plugin setup encountered issues"
-    fi
-  else
-    log_warn "Neovim not found, skipping LazyVim setup"
-  fi
-}
-
-# 13. Final configuration and tips
 show_final_tips() {
   log_step "Setup complete! Here are some next steps:"
 
@@ -239,25 +110,28 @@ main() {
   fi
 
   # Execute installation steps in order with better error handling
-  . ${CHEZMOI_SOURCE_DIR}/scripts/zsh_omz_p10k.sh
-  # install_oh_my_zsh || { log_error "Oh My Zsh installation failed"; }
-  # install_powerlevel10k || { log_error "Powerlevel10k installation failed"; }
-  # install_zsh_plugins || { log_error "Zsh plugins installation failed"; }
+  . "{{ .chezmoi.homeDir }}/scripts/zsh_omz_p10k.sh"
+  install_oh_my_zsh || { log_error "Oh My Zsh installation failed"; }
+  install_powerlevel10k || { log_error "Powerlevel10k installation failed"; }
+  install_zsh_plugins || { log_error "Zsh plugins installation failed"; }
 
-  . ${CHEZMOI_SOURCE_DIR}/scripts/git_install_and_setup.sh
-  # setup_git_ssh || { log_error "Git SSH setup failed"; }
+  . "{{ .chezmoi.homeDir }}/scripts/git_install_and_setup.sh"
+  setup_git_ssh || { log_error "Git SSH setup failed"; }
 
-  . ${CHEZMOI_SOURCE_DIR}/scripts/neovim_install.sh
-  # install_neovim || { log_error "Neovim installation failed"; }
+  . "{{ .chezmoi.homeDir }}/scripts/neovim_install.sh"
+  install_neovim || { log_error "Neovim installation failed"; }
 
-  . ${CHEZMOI_SOURCE_DIR}/scripts/asdf_install.sh
-  # install_asdf || { log_error "asdf installation failed"; }
-  # setup_asdf_tools || { log_error "asdf tools setup failed"; }
-  # install_cargo_tools || { log_error "Cargo tools installation failed"; }
+  . "{{ .chezmoi.homeDir }}/scripts/asdf_install.sh"
+  install_asdf || { log_error "asdf installation failed"; }
+  setup_asdf_tools || { log_error "asdf tools setup failed"; }
+  install_cargo_tools || { log_error "Cargo tools installation failed"; }
 
-  # install_sdkman || { log_error "SDKMAN installation failed"; }
-  # setup_java_ecosystem || { log_error "Java ecosystem setup failed"; }
-  # setup_lazyvim || { log_error "LazyVim setup failed"; }
+  . "{{ .chezmoi.homeDir }}/scripts/sdkman_install.sh"
+  install_sdkman || { log_error "SDKMAN installation failed"; }
+  setup_java_ecosystem || { log_error "Java ecosystem setup failed"; }
+
+  . "{{ .chezmoi.homeDir }}/scripts/lazyvim_setup.sh"
+  setup_lazyvim || { log_error "LazyVim setup failed"; }
 
   show_final_tips
 }
