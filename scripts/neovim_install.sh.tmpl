@@ -29,6 +29,12 @@ install_neovim() {
       if [[ -f "$nvim_path" && -s "$nvim_path" ]]; then
         log_step "Verifying AppImage file type"
 
+        if ! command_exists -v file >/dev/null 2>&1; then
+          log_error "The 'file' command is not installed. Please install it with sudo zypper install file"
+          rm -f "$nvim_path"
+          return 1
+        fi
+
         # Use file command to check if it's a valid ELF executable
         local file_type
         file_type=$(file -b "$nvim_path")
@@ -44,7 +50,7 @@ install_neovim() {
           # Make file executable
           chmod u+x "$nvim_path"
 
-          if mv "$nvim_path" "$nvim_install_dir"; then
+          if mv "$nvim_path" "$nvim_install_dir/nvim"; then
             log_info "Neovim successfully installed to $nvim_install_dir/nvim"
 
             # Verify the installation worked
