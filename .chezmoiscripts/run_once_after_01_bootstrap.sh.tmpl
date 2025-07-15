@@ -186,6 +186,11 @@ PKG_UPDATE="sudo zypper refresh"
 PKG_INSTALL="sudo zypper install -y"
 PKG_SEARCH="zypper search"
 
+# Patterns install with -t pattern flag
+PATTERNS=(
+  devel_basis
+)
+
 PACKAGES=(
   pattern-devel-base
   curl
@@ -223,6 +228,12 @@ exit 1
 # Update package database
 log_step "Updating package database..."
 $PKG_UPDATE
+
+# Pattern Package Install
+log_step "Installing package pattern using $PKG_MANAGER"
+for pattern in "${PATTERNS[@]}"; do
+  sudo zypper install -y -t pattern "$pattern"
+done
 
 # Install packages
 log_step "Installing packages using $PKG_MANAGER..."
