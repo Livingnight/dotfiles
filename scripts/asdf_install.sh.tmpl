@@ -4,15 +4,21 @@
 set -euo pipefail
 
 #INFO: sourcing utility and logging functions
-# . "{{ .chezmoi.homeDir }}/scripts/logging.sh"
-# . "{{ .chezmoi.homeDir }}/scripts/utils.sh"
+HOME_DIR="{{ .chezmoi.homeDir }}"
+
+. "$HOME_DIR/scripts/logging.sh"
+. "$HOME_DIR/scripts/utils.sh"
+
+readonly ASDF_VERSION="v0.18.0"
+readonly ASDF_DIR="{{ .chezmoi.homeDir }}/.asdf"
+readonly CARGO_TOOLS=(cargo-edit cargo-watch cargo-audit cargo-nextest)
 
 # 7. Install asdf if not already present
 install_asdf() {
   log_step "Installing asdf..."
 
   if [ ! -d "$ASDF_DIR" ] || [ ! -f "$ASDF_DIR/asdf.sh" ]; then
-    log_info "Installing asdf..."
+    log_info "asdf Not found. Installing asdf..."
 
     # if ! command_exists git; then
     #
@@ -28,7 +34,7 @@ install_asdf() {
       local asdf_url="https://github.com/asdf-vm/asdf/releases/download/${ASDF_VERSION}/asdf-${ASDF_VERSION}-linux-amd64.tar.gz"
 
       if download_with_retry "$asdf_url" "$asdf_archive"; then
-        log_info "Downloading and installing the binary"
+        log_step "Downloading and installing the binary"
         if gzip -t "$asdf_archive" 2>/dev/null; then
           # Extract binary to temporary location
           local temp_dir="/tmp/asdf-binary"
@@ -54,8 +60,6 @@ install_asdf() {
       return 1
     fi
 
-    # Configure shell integration
-    configure_asdf_shell_integration_v2
   else
     log_info "asdf already installed"
   fi
@@ -63,7 +67,7 @@ install_asdf() {
 
 # Configure asdf shell integration with debug logging
 configure_asdf_shell_integration_v2() {
-  log_info "Configuring asdf shell integration..."
+  log_step "Configuring asdf shell integration..."
 
   # For .zshrc
   if [ -f "$HOME_DIR/.zshrc" ]; then
@@ -77,8 +81,6 @@ configure_asdf_shell_integration_v2() {
 
 # asdf version manager
 . "\$HOME/.asdf/asdf.sh"
-# asdf completions
-. "\$HOME/.asdf/completions/asdf.bash"
 EOF
 
       log_info "Added asdf configuration to .zshrc"
@@ -108,8 +110,6 @@ EOF
 
 # asdf version manager
 . "\$HOME/.asdf/asdf.sh"
-# asdf completions
-. "\$HOME/.asdf/completions/asdf.bash"
 EOF
 
       log_info "Added asdf configuration to .bashrc"
@@ -134,7 +134,7 @@ setup_asdf_tools() {
 
   # Source asdf for this session with better error handling
   if [ -f "$ASDF_DIR/asdf.sh" ]; then
-    log_info "Sourcing asdf for current session..."
+    log_step "Sourcing asdf for current session..."
 
     # Use safe sourcing method
     if safe_source_with_export "$ASDF_DIR/asdf.sh"; then
@@ -164,7 +164,7 @@ setup_asdf_tools() {
   local plugins=(nodejs python golang rust)
   for plugin in "${plugins[@]}"; do
     if ! asdf plugin list | grep -q "^${plugin}$"; then
-      log_info "Adding asdf plugin: $plugin"
+      log_step "Adding asdf plugin: $plugin"
       if asdf plugin add "$plugin" 2>/dev/null; then
         log_info "Added asdf plugin: $plugin"
       else

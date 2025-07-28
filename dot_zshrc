@@ -23,26 +23,10 @@ export EDITOR="nvim"
 # 🔁 Reload Support
 # -------------------------------------------
 
-alias reload="source ~/.zshrc"
 #
 # -------------------------------------------
 # 💡 Quality of Life
 # -------------------------------------------
-
-
-# Aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-alias vi='nvim'
-alias gst='git status'
-alias g='lazygit'
-
-# History size
-HISTSIZE=10000
-SAVEHIST=10000
-HISTFILE=~/.zsh_history
-
 
 # -------------------------------------------
 # 🚀 Oh My Zsh Setup
@@ -50,7 +34,7 @@ HISTFILE=~/.zsh_history
 
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"  # or try "powerlevel10k" if installed
-plugins=(git z zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(git gh z zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -92,19 +76,12 @@ export PATH="/usr/local/go/bin:$PATH"
 # 🐍 Python via pyenv
 # -------------------------------------------
 
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-if command -v pyenv 1>/dev/null 2>&1; then
-  eval "$(pyenv init --path)"
-  eval "$(pyenv init -)"
-fi
-
-# -------------------------------------------
-# 🟢 Node.js via nvm
-# -------------------------------------------
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+# export PYENV_ROOT="$HOME/.pyenv"
+# export PATH="$PYENV_ROOT/bin:$PATH"
+# if command -v pyenv 1>/dev/null 2>&1; then
+#   eval "$(pyenv init --path)"
+#   eval "$(pyenv init -)"
+# fi
 
 # -------------------------------------------
 # 🚀 Oh My Zsh
@@ -120,6 +97,22 @@ setopt PROMPT_SUBST
 # Reload command
 alias reload="source ~/.zshrc"
 
+
+# Aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+alias vi='nvim'
+alias gst='git status'
+unalias g
+alias g='lazygit'
+
+# History size
+HISTSIZE=10000
+SAVEHIST=10000
+HISTFILE=~/.zsh_history
+
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
@@ -134,4 +127,7 @@ fi
 # -------------------------------------------
 
 # Fix clipboard support for win32yank if needed
-  export PATH="/.local/bin:$PATH"
+export PATH="/.local/bin:$PATH"
+
+# Fixing chezmoi permission issues
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"

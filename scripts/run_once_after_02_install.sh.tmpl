@@ -5,12 +5,7 @@
 set -euo pipefail # Stricter error handling
 
 # Configuration
-readonly ASDF_VERSION="v0.18.0"
-readonly ASDF_DIR="{{ .chezmoi.homeDir }}/.asdf"
-readonly HOME_DIR="{{ .chezmoi.homeDir }}"
-readonly CARGO_TOOLS=(cargo-edit cargo-watch cargo-audit cargo-nextest)
-readonly OH_MY_ZSH_DIR="$HOME_DIR/.oh-my-zsh"
-readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
+HOME_DIR="{{ .chezmoi.homeDir }}"
 
 #INFO: Function to check if command exists
 
@@ -32,10 +27,6 @@ readonly P10K_DIR="$HOME_DIR/.oh-my-zsh/custom/themes/powerlevel10k"
 # log_warn() {
 # log_error() {
 # log_step() {
-
-#INFO: Utility functions sourced from 03_utils.sh
-
-. "{{ .chezmoi.homeDir }}/scripts/utils.sh"
 
 #INFO: function to download and verify files
 
@@ -123,8 +114,9 @@ main() {
 
   . "{{ .chezmoi.homeDir }}/scripts/asdf_install.sh"
   install_asdf || { log_error "asdf installation failed"; }
+  configure_asdf_shell_integration_v2 || {log_error "configure_asdf_shell_integration_v2 failed"}
   setup_asdf_tools || { log_error "asdf tools setup failed"; }
-  install_cargo_tools || { log_error "Cargo tools installation failed"; }
+  # install_cargo_tools || { log_error "Cargo tools installation failed"; }
 
   . "{{ .chezmoi.homeDir }}/scripts/sdkman_install.sh"
   install_sdkman || { log_error "SDKMAN installation failed"; }
