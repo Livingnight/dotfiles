@@ -1,4 +1,4 @@
-local inlay_hint = require("vim.lsp.inlay_hint")
+-- local inlay_hint = require("vim.lsp.inlay_hint")
 -- Using autocmd launch (default)
 -- Default uses jars from mason or ~/.vscode/extensions/vmware.vscode-spring-boot-x.x.x
 return {
@@ -7,6 +7,7 @@ return {
   dependencies = {
     "mfussenegger/nvim-jdtls",
   },
+  enabled = LazyVim.has("mason.nvim") and require("mason-registry").is_installed("vscode-spring-boot-tools"),
   ---@type bootls.Config
   ---@diagnostic disable-next-line: missing-fields
   opts = {

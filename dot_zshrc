@@ -106,6 +106,14 @@ alias vi='nvim'
 alias gst='git status'
 unalias g
 alias g='lazygit'
+alias cc='chezmoi cd'
+alias ce='chezmoi edit'
+alias dev='cd ~/dev'
+alias dj='cd ~/dev/java'
+alias dp='cd ~/dev/projects/'
+alias dn='cd ~/dev/node'
+alias dt='cd ~/dev/typescript/'
+alias loc='cd ~/.local'
 
 # History size
 HISTSIZE=10000

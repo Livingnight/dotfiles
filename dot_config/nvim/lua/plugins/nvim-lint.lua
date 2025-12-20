@@ -6,12 +6,12 @@ return {
     events = { "BufWritePost", "BufReadPost", "InsertLeave" },
     linters_by_ft = {
       fish = { "fish" },
-      javascript = { "eslint" },
-      jsx = { "eslint" },
-      typescript = { "eslint" },
-      tsx = { "eslint" },
+      javascript = { "eslint_d" },
+      jsx = { "eslint_d" },
+      typescript = { "eslint_d" },
+      tsx = { "eslint_d" },
       python = { "flake8" },
-      sql = { "sqlfluff" },
+      sql = { "sqlfluff_custom" },
       -- Use the "*" filetype to run linters on all filetypes.
       -- ['*'] = { 'global linter' },
       -- Use the "_" filetype to run linters on filetypes that don't have other linters configured.
@@ -22,14 +22,13 @@ return {
     -- or add custom linters.
     ---@type table<string,table>
     linters = {
-      sqlfluff = {
+      sqlfluff_custom = {
         cmd = "sqlfluff",
         args = {
           "lint",
+          "--format=json",
         },
-        stdin = false,
-        stream = "stdout",
-        -- ignore_exitcode = true,
+        ignore_exitcode = true,
       },
       -- -- Example of using selene only when a selene.toml file is present
       -- selene = {
