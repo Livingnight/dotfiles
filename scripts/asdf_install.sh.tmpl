@@ -161,7 +161,7 @@ setup_asdf_tools() {
   fi
 
   # Add language plugins
-  local plugins=(nodejs python golang rust)
+  local plugins=(fd nodejs python golang rust)
   for plugin in "${plugins[@]}"; do
     if ! asdf plugin list | grep -q "^${plugin}$"; then
       log_step "Adding asdf plugin: $plugin"
