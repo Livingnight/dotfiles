@@ -2,6 +2,7 @@ return {
   -- Spring project generator
   {
     "jkeresman01/spring-initializr.nvim",
+    cmd = { "SpringInitializr", "SpringGenerateProject" },
     ft = { "java" },
     dependencies = {
       "nvim-lua/plenary.nvim",
@@ -25,6 +26,7 @@ return {
   -- Spring Boot auto-reload
   {
     "elmcgill/springboot-nvim",
+    cmd = { "SpringBoot" },
     ft = { "java" },
     keys = {
       {

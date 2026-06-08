@@ -10,14 +10,17 @@ HOME_DIR="{{ .chezmoi.homeDir }}"
 set -euo pipefail
 
 install_neovim() {
+  local nvim_path="/tmp/nvim-appimage"
+  local nvim_url="https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.appimage"
+  local nvim_install_dir="$HOME/.local/bin"
+  local nvim_version="$(nvim -v)"
+
+  log_info "Current Version of neovim is ${nvim_version}"
+
   log_step "Installation of Neovim Starting..."
 
   if ! command_exists nvim; then
     log_info "Neovim isn't installed... downloading AppImage from release page"
-
-    local nvim_path="/tmp/nvim-appimage"
-    local nvim_url="https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.appimage"
-    local nvim_install_dir="$HOME/.local/bin"
 
     # Add ~/.local/bin to PATH if not already there
     if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
@@ -33,7 +36,7 @@ install_neovim() {
         log_step "Verifying AppImage file type"
 
         if ! command_exists -v file >/dev/null 2>&1; then
-          log_error "The 'file' command is not installed. Please install it with sudo zypper install file"
+          log_error "The 'file' command is not installed. Please install it with package manager of current distro"
           rm -f "$nvim_path"
           return 1
         fi
