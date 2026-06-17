@@ -1,7 +1,7 @@
-fd 9.0.0
-nodejs 24.4.0
+fd 10.4.2 9.0.0 system
+nodejs 26.3.0 24.4.0 system
 python 3.13.5
-golang 1.24.5
-rust 1.89.0
+golang 1.26.4 1.24.5
+rust 1.96.0 1.85.0 system 
 lua 5.1.5 5.4.7
-chezmoi 2.63.1
+chezmoi 2.70.5 2.63.1
