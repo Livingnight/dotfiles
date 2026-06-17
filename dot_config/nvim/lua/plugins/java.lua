@@ -280,9 +280,9 @@ return {
           end
 
           -- Disable semantic tokens for jdtls to avoid invalid-buffer races
-          if client.server_capabilities.semanticTokensProvider then
-            client.server_capabilities.semanticTokensProvider = nil
-          end
+          -- if client.server_capabilities.semanticTokensProvider then
+          --   client.server_capabilities.semanticTokensProvider = nil
+          -- end
 
           -- Buffer-local flag: only set up Java-specific mappings once per buffer.
           if vim.b[args.buf].jdtls_keys_set then

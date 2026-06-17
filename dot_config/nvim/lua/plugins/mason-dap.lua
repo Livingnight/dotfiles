@@ -6,11 +6,7 @@ return {
       "mfussenegger/nvim-dap",
     },
     opts = {
-      ensure_installed = {
-        "java-debug-adapter",
-        "java-test",
-        "js-debug-adapter",
-      },
+      ensure_installed = {},
       automatic_installation = true,
       handlers = {},
     },

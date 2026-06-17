@@ -9,13 +9,86 @@ HOME_DIR="{{ .chezmoi.homeDir }}"
 
 set -euo pipefail
 
-install_neovim() {
-  local nvim_path="/tmp/nvim-appimage"
-  local nvim_url="https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.appimage"
-  local nvim_install_dir="$HOME/.local/bin"
-  local nvim_version="$(nvim -v)"
+nvim_path="/tmp/nvim-appimage"
+#nvim_url="https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.appimage"
+nvim_url="https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.appimage"
+nvim_install_dir="$HOME/.local/bin"
 
-  log_info "Current Version of neovim is ${nvim_version}"
+nvim_current_version="$(nvim --version | awk 'NR==1 {print $2}')"
+installed="${nvim_current_version%%-*}"
+
+get_latest_stable_neovim() {
+  curl -s https://api.github.com/repos/neovim/neovim/releases/latest |
+    grep '"tag_name"' |
+    cut -d '"' -f4
+}
+nvim_latest_stable_version=$(get_latest_stable_neovim)
+
+download_neovim_appimage() {
+
+  if download_with_retry "$nvim_url" "$nvim_path"; then
+    log_info "Neovim AppImage downloaded successfully"
+
+    if [[ -f "$nvim_path" && -s "$nvim_path" ]]; then
+      log_step "Verifying AppImage file type"
+
+      if ! command_exists -v file >/dev/null 2>&1; then
+        log_error "The 'file' command is not installed. Please install it with package manager of current distro"
+        rm -f "$nvim_path"
+        return 1
+      fi
+
+      # Use file command to check if it's a valid ELF executable
+      local file_type
+      file_type=$(file -b "$nvim_path")
+
+      # Check if it's an ELF executable (What AppImages should be)
+      if [[ "$file_type" == *"ELF"* && "$file_type" == *"executable"* ]]; then
+        log_info "AppImage has been verified as ELF type and executable"
+
+        if strings "$nvim_path" | grep -q "AppImage" 2>/dev/null; then
+          log_info "AppImage signature confirmed"
+        fi
+
+        # Make file executable
+        chmod u+x "$nvim_path"
+
+        if mv "$nvim_path" "$nvim_install_dir/nvim"; then
+          log_info "Neovim successfully installed to $nvim_install_dir/nvim"
+
+          # Verify the installation worked
+          if command_exists nvim; then
+            log_info "Neovim installation verified - nvim command is available"
+
+          else
+            log_error "Neovim binary installed but not found in PATH"
+            return 1
+          fi
+        else
+          log_error "Failed to move nvim to $nvim_install_dir"
+          # Clean up invalid file
+          rm -f "$nvim_path"
+          return 1
+        fi
+      else
+        log_error "Downloaded file is not a valid ELF executable. Got $file_type"
+        # Clean up invalid file
+        rm -f "$nvim_path"
+        return 1
+      fi
+    else
+      log_error "Downloaded file was invalid or emtpy"
+      # Clean up invalid file
+      rm -f "$nvim_path"
+      return 1
+    fi
+  else
+    log_info "Download failed"
+    return 1
+  fi
+}
+
+install_neovim() {
 
   log_step "Installation of Neovim Starting..."
 
@@ -28,66 +101,16 @@ install_neovim() {
       export PATH="$HOME/.local/bin:$PATH"
     fi
 
-    log_step "Downloading AppImage from --- $nvim_url"
-    if download_with_retry "$nvim_url" "$nvim_path"; then
-      log_info "Neovim AppImage downloaded successfully"
+    download_neovim_appimage
 
-      if [[ -f "$nvim_path" && -s "$nvim_path" ]]; then
-        log_step "Verifying AppImage file type"
+  elif [ "$installed" != "$nvim_latest_stable_version" ]; then
+    log_info "Updating Neovim: current: $installed to latest: $nvim_latest_stable_version"
 
-        if ! command_exists -v file >/dev/null 2>&1; then
-          log_error "The 'file' command is not installed. Please install it with package manager of current distro"
-          rm -f "$nvim_path"
-          return 1
-        fi
+    download_neovim_appimage
 
-        # Use file command to check if it's a valid ELF executable
-        local file_type
-        file_type=$(file -b "$nvim_path")
+    echo "Current version of neovim is : $installed"
+    echo "Latest version of neovim is: $nvim_latest_stable_version"
 
-        # Check if it's an ELF executable (What AppImages should be)
-        if [[ "$file_type" == *"ELF"* && "$file_type" == *"executable"* ]]; then
-          log_info "AppImage has been verified as ELF type and executable"
-
-          if strings "$nvim_path" | grep -q "AppImage" 2>/dev/null; then
-            log_info "AppImage signature confirmed"
-          fi
-
-          # Make file executable
-          chmod u+x "$nvim_path"
-
-          if mv "$nvim_path" "$nvim_install_dir/nvim"; then
-            log_info "Neovim successfully installed to $nvim_install_dir/nvim"
-
-            # Verify the installation worked
-            if command_exists nvim; then
-              log_info "Neovim installation verified - nvim command is available"
-            else
-              log_error "Neovim binary installed but not found in PATH"
-              return 1
-            fi
-          else
-            log_error "Failed to move nvim to $nvim_install_dir"
-            # Clean up invalid file
-            rm -f "$nvim_path"
-            return 1
-          fi
-        else
-          log_error "Downloaded file is not a valid ELF executable. Got $file_type"
-          # Clean up invalid file
-          rm -f "$nvim_path"
-          return 1
-        fi
-      else
-        log_error "Downloaded file was invalid or emtpy"
-        # Clean up invalid file
-        rm -f "$nvim_path"
-        return 1
-      fi
-    else
-      log_info "Download failed"
-      return 1
-    fi
   else
     log_info "Neovim already installed. Proceeding..."
   fi

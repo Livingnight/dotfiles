@@ -133,11 +133,11 @@ return {
     priority = 1000,
   },
 
-  -- Configure LazyVim to load gruvbox
+  -- Configure LazyVim to load colorscheme of choice
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = { "eldritch" },
+      colorscheme = { "cyberdream" },
     },
   },
 }

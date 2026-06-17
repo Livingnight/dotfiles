@@ -1,71 +1,80 @@
 return {
+  -- nvim-dap-view: UI for DAP
+  {
+    "igorlfs/nvim-dap-view",
+    url = "git@github.com:igorlfs/nvim-dap-view.git",
+  },
+
+  -- nvim-dap core
   {
     "mfussenegger/nvim-dap",
     dependencies = {
-      -- UI
-      { "igorlfs/nvim-dap-view", opts = {} },
-      -- Optional: virtual text overlays for variables etc.
+      "igorlfs/nvim-dap-view", -- re-use the same plugin name
       "theHamsta/nvim-dap-virtual-text",
     },
     keys = {
       {
-        "db",
+        "<leader>d",
+        group = "debug",
+      },
+      {
+        "<leader>db",
         function()
           require("dap").toggle_breakpoint()
         end,
         desc = "Toggle Breakpoint",
       },
       {
-        "dB",
+        "<leader>dB",
         function()
           require("dap").set_breakpoint(vim.fn.input("Breakpoint Condition: "))
         end,
         desc = "Breakpoint Condition",
       },
       {
-        "dc",
+        "<leader>dc",
         function()
           require("dap").continue()
         end,
         desc = "Continue",
       },
       {
-        "dC",
+        "<leader>dC",
         function()
           require("dap").run_to_cursor()
         end,
         desc = "Run to Cursor",
       },
       {
-        "di",
+        "<leader>di",
         function()
           require("dap").step_into()
         end,
         desc = "Step Into",
       },
       {
-        "dO",
+        "<leader>dO",
         function()
           require("dap").step_over()
         end,
         desc = "Step Over",
       },
       {
-        "do",
+        "<leader>do",
         function()
           require("dap").step_out()
         end,
         desc = "Step out",
       },
       {
-        "dr",
+        "<leader>dr",
         function()
           require("dap").repl.toggle()
         end,
         desc = "Toggle REPL",
       },
       {
-        "dt",
+        "<leader>dt",
         function()
           require("dap").terminate()
         end,
@@ -75,7 +84,7 @@ return {
       -- nvim-dap-view: toggle UI window
       -- :DapViewToggle! is the standard toggle command
       {
-        "du",
+        "<leader>du",
         "<cmd>DapViewToggle!<CR>",
         desc = "Toggle DAP View",
       },
