@@ -65,16 +65,24 @@ setup_java_ecosystem() {
         log_info "Installing Java ecosystem tools..."
 
         # Install with better error handling and version checking
-        log_info "Installing Java 21..."
-        if ! sdk list java | grep -q "21.0.1-tem.*installed" 2>/dev/null; then
-          if sdk install java 21.0.1-tem; then
-            log_info "Java 21.0.1-tem installed successfully"
+        log_info "Installing Java JVMS..."
+
+        jdklist=("25.0.3-tem" "21.0.11-tem" "17.0.19-tem" "11.0.31-tem" "8.0.492-tem")
+
+        is_jdk_version_installed() {
+          local jdk="$1"
+          [ -d "$HOME/.sdkman/candidates/java/$jdk" ]
+
+        }
+
+        for jdk in "${jdklist[@]}"; do
+          if is_jdk_version_installed "$jdk"; then
+            log_info "$jdk already installed"
           else
-            log_warn "Failed to install Java 21.0.1-tem"
+            log_step "$jdk missing. Beginning installation"
+            sdk install java "$jdk"
           fi
-        else
-          log_info "Java 21.0.1-tem already installed"
-        fi
+        done
 
         log_info "Installing Maven..."
         if ! command_exists mvn; then

@@ -6,3 +6,4 @@
 --     [".*%.sh%.tmpl"] = "sh",
 --   },
 -- })
+vim.opt.shell = "zsh"
