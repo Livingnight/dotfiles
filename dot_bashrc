@@ -13,6 +13,11 @@ case $- in
   ;;
 esac
 
+# --- making sure that chezmoi has access to a directory owned by user for runtime as required
+export XDG_RUNTIME_DIR="$HOME/.xdg-runtime"
+[[ ! -d "$XDG_RUNTIME_DIR" ]] || mkdir -p "$HOME/.xdg-runtime"
+chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null
+
 # --- Safe fallback content for pure Bash use ---
 
 # History settings

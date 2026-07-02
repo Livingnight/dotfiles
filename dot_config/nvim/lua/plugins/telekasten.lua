@@ -21,7 +21,7 @@ if true then
         require("telekasten").setup({
           home = home,
           take_over_my_home = true,
-          auto_set_filetype = true,
+          auto_set_filetype = false,
 
           -- dir names for special notes (absolute path or subdir name)
           dailies = home .. "/" .. "journal",

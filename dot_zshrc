@@ -17,6 +17,10 @@ export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 export LANG="C.UTF-8"
 export LC_ALL="C.UTF-8"
 
+export XDG_RUNTIME_DIR="$HOME/.xdg-runtime"
+[[ -d "$XDG_RUNTIME_DIR" ]] || mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
 # Set default editor
 export EDITOR="nvim"
 # -------------------------------------------
@@ -136,6 +140,3 @@ fi
 
 # Fix clipboard support for win32yank if needed
 export PATH="/.local/bin:$PATH"
-
-# Fixing chezmoi permission issues
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
